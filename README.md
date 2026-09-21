@@ -2,16 +2,16 @@
 
 <table><tr>
 <td align="center">
-  <a href="https://esa.console.aliyun.com/pages/create?repository-url=https%3A%2F%2Fgithub.com%2FKleinsche%2Fesa-origin-webhook&repository-name=esa-origin-webhook&project-name=esa-origin-webhook&branch=main&root-directory=%2F&install-command=npm%20install&env=ESA_ACCESS_KEY_ID%2CESA_ACCESS_KEY_SECRET%2CESA_SITE_ID%2CWEBHOOK_TOKEN&env-description=ESA_ACCESS_KEY_ID%20%2F%20ESA_ACCESS_KEY_SECRET%20%E4%BB%8E%E9%98%BF%E9%87%8C%E4%BA%91%20RAM%20%E6%8E%A7%E5%88%B6%E5%8F%B0%20AccessKey%20%E9%A1%B5%E9%9D%A2%E8%8E%B7%E5%8F%96%EF%BC%8C%E5%BB%BA%E8%AE%AE%E6%8E%88%E4%BA%88%20ESA%20%E6%9C%80%E5%B0%8F%E6%9D%83%E9%99%90%E7%AD%96%E7%95%A5%EF%BC%9BESA_SITE_ID%20%E4%B8%BA%E9%BB%98%E8%AE%A4%E7%AB%99%E7%82%B9%20ID%EF%BC%88%E7%BA%AF%E6%95%B0%E5%AD%97%EF%BC%8C%E5%85%B6%E4%BB%96%E7%AB%99%E7%82%B9%E5%8F%AF%E5%9C%A8%E8%AF%B7%E6%B1%82%E4%BD%93%E4%BC%A0%20siteId%20%E6%8C%87%E5%AE%9A%EF%BC%89%EF%BC%9BWEBHOOK_TOKEN%20%E4%B8%BA%E8%B0%83%E7%94%A8%E4%BB%A4%E7%89%8C%EF%BC%8C%E5%BC%BA%E7%83%88%E5%BB%BA%E8%AE%AE%E8%AE%BE%E7%BD%AE&env-link=https%3A%2F%2Fram.console.aliyun.com%2Fmanage%2Fak"><img src="https://img.shields.io/badge/%E9%83%A8%E7%BD%B2%E5%88%B0-ESA%20Pages%20%C2%B7%20%E4%B8%AD%E5%9B%BD%E7%AB%99-FF6A00?style=for-the-badge&logo=alibabacloud&logoColor=white" alt="部署到 ESA Pages（中国站）" height="32"></a><br>
+  <a href="https://esa.console.aliyun.com/edge/pages/creation"><img src="https://img.shields.io/badge/%E9%83%A8%E7%BD%B2%E5%88%B0-ESA%20Pages%20%C2%B7%20%E4%B8%AD%E5%9B%BD%E7%AB%99-FF6A00?style=for-the-badge&logo=alibabacloud&logoColor=white" alt="部署到 ESA Pages（中国站）" height="32"></a><br>
   <sub>中国站</sub>
 </td>
 <td align="center">
-  <a href="https://esa.console.alibabacloud.com/pages/create?repository-url=https%3A%2F%2Fgithub.com%2FKleinsche%2Fesa-origin-webhook&repository-name=esa-origin-webhook&project-name=esa-origin-webhook&branch=main&root-directory=%2F&install-command=npm%20install&env=ESA_ACCESS_KEY_ID%2CESA_ACCESS_KEY_SECRET%2CESA_SITE_ID%2CWEBHOOK_TOKEN&env-description=ESA_ACCESS_KEY_ID%20%2F%20ESA_ACCESS_KEY_SECRET%20%E4%BB%8E%E9%98%BF%E9%87%8C%E4%BA%91%20RAM%20%E6%8E%A7%E5%88%B6%E5%8F%B0%20AccessKey%20%E9%A1%B5%E9%9D%A2%E8%8E%B7%E5%8F%96%EF%BC%8C%E5%BB%BA%E8%AE%AE%E6%8E%88%E4%BA%88%20ESA%20%E6%9C%80%E5%B0%8F%E6%9D%83%E9%99%90%E7%AD%96%E7%95%A5%EF%BC%9BESA_SITE_ID%20%E4%B8%BA%E9%BB%98%E8%AE%A4%E7%AB%99%E7%82%B9%20ID%EF%BC%88%E7%BA%AF%E6%95%B0%E5%AD%97%EF%BC%8C%E5%85%B6%E4%BB%96%E7%AB%99%E7%82%B9%E5%8F%AF%E5%9C%A8%E8%AF%B7%E6%B1%82%E4%BD%93%E4%BC%A0%20siteId%20%E6%8C%87%E5%AE%9A%EF%BC%89%EF%BC%9BWEBHOOK_TOKEN%20%E4%B8%BA%E8%B0%83%E7%94%A8%E4%BB%A4%E7%89%8C%EF%BC%8C%E5%BC%BA%E7%83%88%E5%BB%BA%E8%AE%AE%E8%AE%BE%E7%BD%AE&env-link=https%3A%2F%2Fram.console.alibabacloud.com%2Fmanage%2Fak"><img src="https://img.shields.io/badge/Deploy%20to-ESA%20Pages%20%C2%B7%20Intl-0B4C8C?style=for-the-badge&logo=alibabacloud&logoColor=white" alt="部署到 ESA Pages（国际站）" height="32"></a><br>
+  <a href="https://esa.console.alibabacloud.com/edge/pages/creation"><img src="https://img.shields.io/badge/Deploy%20to-ESA%20Pages%20%C2%B7%20Intl-0B4C8C?style=for-the-badge&logo=alibabacloud&logoColor=white" alt="部署到 ESA Pages（国际站）" height="32"></a><br>
   <sub>国际站</sub>
 </td>
 </tr></table>
 
-按你的账号所在站点点任意一个按钮，会带上已授权的 GitHub 仓库并跳转到 ESA「函数和 Pages」的创建流程，下面这些字段链接已自动带好，无需手填：
+按你的账号所在站点点任意一个按钮，会跳转到 ESA「函数和 Pages」的创建流程，下面这些字段需手填：
 
 | 字段 | 预填值 |
 | --- | --- |
@@ -25,8 +25,6 @@
 | 环境变量清单 | `ESA_ACCESS_KEY_ID`、`ESA_ACCESS_KEY_SECRET`、`ESA_SITE_ID`、`WEBHOOK_TOKEN` |
 
 环境变量的**取值**仍需自己补齐：AccessKey 到 RAM 控制台获取（[中国站](https://ram.console.aliyun.com/manage/ak) / [国际站](https://ram.console.alibabacloud.com/manage/ak)，建议只授予文末《最小权限 RAM 策略》里的那几个 Action）；`ESA_SITE_ID` 填纯数字的 ESA 站点 ID；`WEBHOOK_TOKEN` 填一个高强度随机串。其余变量属于可选加固或调优项，需要时按下方 [环境变量](#环境变量) 表格自行添加。
-
-> ESA 控制台尚未公开这一 URL 预填能力的文档，参数键名沿用同类 Deploy 按钮的通用写法（`repository-url` / `project-name` / `root-directory` / `env` 等）。若你的控制台版本忽略了它们，链接仍会落到正确的创建页，按上表把字段手工补齐即可，结果完全一致。
 
 一个部署在**阿里云 ESA（边缘安全加速）边缘函数**上的小服务：通过 HTTP Webhook 更新 ESA 加速域名的**回源地址**与 **HTTP/HTTPS 回源端口**。
 

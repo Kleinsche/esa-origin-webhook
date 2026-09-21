@@ -1,0 +1,15 @@
+{
+  "name": "esa-origin-webhook",
+  "version": "1.0.0",
+  "description": "阿里云 ESA 边缘函数：通过 Webhook 更新加速域名的回源地址与 HTTP/HTTPS 回源端口",
+  "private": true,
+  "license": "AGPL-3.0",
+  "type": "module",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "build": "node -e \"console.log('esa-origin-webhook: no static assets to build')\"",
+    "dev": "node dev-server.mjs"
+  }
+}

@@ -127,13 +127,13 @@ async function describeOrigin(env, source, { corsOrigin, requestId }) {
 /* ---------------------------------------------------------------------------------- */
 
 async function updateOrigin(env, source, { corsOrigin, requestId }) {
-  const client = buildClient(env);
-
-  /* 鉴权 */
+  /* 鉴权：必须早于构建客户端，否则凭证缺失时会先抛 missing credentials，导致鉴权失败也被报成 500 */
   const secret = pick(source, 'secret', 'token');
   if (!checkSecret(env, secret)) {
     return json({ error: 'Unauthorized', message: 'invalid secret' }, 401, corsOrigin);
   }
+
+  const client = buildClient(env);
 
   /* 站点与域名 */
   const siteId = resolveSiteId(env, source);

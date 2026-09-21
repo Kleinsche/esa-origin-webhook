@@ -1,11 +1,6 @@
 {
-  // ESA Pages 项目配置（https://help.aliyun.com/zh/edge-security-acceleration/esa/）
   "name": "esa-origin-webhook",
-  // 边缘函数入口文件
-  "entry": "esa.js"
-  // 本项目只有边缘函数、没有静态页面，不需要配置 assets
-  // "assets": { "directory": "public" }
-  // 如需在构建阶段安装依赖 / 执行打包，可打开下面两项：
-  // "installCommand": "npm install",
-  // "buildCommand": "npm run build"
+  "entry": "./esa.js",
+  "installCommand": "npm install",
+  "buildCommand": ""
 }
