@@ -198,9 +198,10 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
     target = 'pool';
   } else {
     /* 记录值即源站地址：CNAME（普通域名源站）或代理的 A/AAAA 记录 */
-    const recordType = String(recordInfo.RecordType || '').toUpperCase();
+    /* RecordType 可能是 A/AAAA 这样的组合值，按 / 拆分后再判定 */
+    const recordTypes = String(recordInfo.RecordType || '').toUpperCase().split('/');
     const allIp = addresses.every((address) => isIpLike(address));
-    if (recordType === 'CNAME' && allIp) {
+    if (recordTypes.includes('CNAME') && allIp) {
       return json(
         {
           error: 'Bad Request',
@@ -210,15 +211,17 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
         corsOrigin,
       );
     }
-    if ((recordType === 'A' || recordType === 'AAAA') && addresses.some((address) => !isIpLike(address))) {
-      return json({ error: 'Bad Request', message: `该记录类型为 ${recordType}，回源地址必须是 IP` }, 400, corsOrigin);
+    if ((recordTypes.includes('A') || recordTypes.includes('AAAA')) && addresses.some((address) => !isIpLike(address))) {
+      return json({ error: 'Bad Request', message: `该记录类型为 ${recordInfo.RecordType}，回源地址必须是 IP` }, 400, corsOrigin);
     }
   }
 
   /* 回源规则（协议与端口） */
   const needRuleUpdate = httpPort !== null || httpsPort !== null || originProtocol !== null;
+  /* newRule=true：跳过已有规则匹配，为该域名新建一条回源规则（避免端口写进全局配置） */
+  const forceNewRule = pick(source, 'newRule', 'createRule', 'forceNewRule') === 'true';
   let rule = null;
-  if (needRuleUpdate) rule = await findOriginRule(client, siteId, domain);
+  if (needRuleUpdate && !forceNewRule) rule = await findOriginRule(client, siteId, domain);
 
   const before = describeState(recordInfo, pool, rule);
   const afterState = {
@@ -274,8 +277,9 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
     readableBefore = await client.updateOriginPool({ siteId, id: pool.Id, origins });
     requestIdFromApi = readableBefore.requestId || '';
   } else {
+    /* ESA 的 Data 必须是 JSON 字符串，且键为小写 value（传对象或 Data.Value 会报 MissingData） */
     const params = { RecordId: recordInfo.RecordId };
-    params.Data = { Value: addresses.join(separator) };
+    params.Data = JSON.stringify({ value: addresses.join(separator) });
     readableBefore = await client.updateRecord(params);
     requestIdFromApi = readableBefore.requestId || '';
   }
@@ -310,7 +314,7 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
       const payload = {
         SiteId: siteId,
         RuleName: `webhook-${domain}`.slice(0, 100),
-        Rule: `(http.host eq "${domain}")`,
+        Rule: hostRuleExpression(domain),
         RuleEnable: 'on',
       };
       if (originProtocol !== null) payload.OriginScheme = originProtocol;
@@ -501,15 +505,29 @@ function buildOrigins(previous, addresses, weight) {
   });
 }
 
+/**
+ * 生成回源规则的匹配表达式
+ * 普通域名用 eq；泛域名（*.example.com）eq 不支持通配，正则 matches 又仅高级版/企业版可用，
+ * 因此统一用 ends_with 匹配域名后缀，如 (ends_with(http.host, ".example.com"))
+ */
+function hostRuleExpression(domain) {
+  if (!domain.startsWith('*.')) return `(http.host eq "${domain}")`;
+  return `(ends_with(http.host, "${domain.slice(1)}"))`;
+}
+
 /** 找到该域名对应的回源规则：优先按 http.host 匹配，其次取全局配置 */
 async function findOriginRule(client, siteId, domain) {
   const { configs } = await client.listOriginRules(siteId, { pageSize: 200 });
   if (!configs.length) return null;
   const quoted = [`"${domain}"`, `'${domain}'`, `\u0022${domain}\u0022`];
+  /* ends_with 规则里写的是 ".example.com" 后缀，泛域名时一并匹配 */
+  if (domain.startsWith('*.')) quoted.push(`"${domain.slice(1)}"`);
   const matched = configs.filter((item) => {
     if (String(item.ConfigType || '').toLowerCase() === 'global') return false;
     const rule = String(item.Rule || '');
-    return quoted.some((token) => rule.includes(token));
+    if (quoted.some((token) => rule.includes(token))) return true;
+    /* 兜底：ESA 控制台建的规则可能把域名放在 RuleName，Rule 写成 true */
+    return String(item.RuleName || '').toLowerCase() === String(domain).toLowerCase();
   });
   if (matched.length) return matched[0];
   return configs.find((item) => String(item.ConfigType || '').toLowerCase() === 'global') || null;
