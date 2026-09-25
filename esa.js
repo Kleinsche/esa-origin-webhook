@@ -20,14 +20,22 @@ import { EsaClient, EsaApiError, mapEsaCodeToStatus } from './lib/esa-client.js'
 
 const ROUTE_PATH = '/update-origin';
 
-/** ESA 边缘函数（Pages）入口：export default { fetch(request, env, ctx) } */
+/**
+ * ESA 边缘函数（Pages）入口
+ * 注意：ESA 这套运行时的第二个参数并不是 Cloudflare 那种「环境变量对象 env」，
+ * 而是运行时上下文（上面有 waitUntil / fetch 等），环境变量可能有别的挂载位置，
+ * 因此这里把 arg2 / arg3 全量交给 collectEnvSources 去多点探测。
+ */
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, arg2, arg3) {
+    const env = collectEnvSources(arg2, arg3);
     return handleRequest(request, env);
   },
 };
 
-export async function handleRequest(request, env = {}) {
+export async function handleRequest(request, arg2 = {}, arg3 = null) {
+  /* 本地调试（dev-server）直接传的就是环境变量对象；线上则是 context，两种情况都在这里统一成同一个 bag */
+  const env = arg2 && arg2.__isEnvBag ? arg2 : collectEnvSources(arg2, arg3);
   const corsOrigin = getEnv(env, 'ESA_CORS_ORIGIN') || '*';
 
   if (request.method === 'OPTIONS') {
@@ -387,11 +395,70 @@ function buildClient(env) {
   });
 }
 
-/** 列出运行时 env 的键名（仅用于排障回显，不含任何值） */
+/**
+ * 汇聚所有可能挂载环境变量的位置
+ * ESA 不同版本运行时的注入方式不一致：有的第二个参数是 env，有的是 context（含 waitUntil / fetch），
+ * 还有的把变量挂在 context.env 或全局对象上，这里全部探测一遍，合成一个「环境变量 bag」。
+ * @returns 一个普通对象（键值即变量），并通过非枚举属性 __sources 记录「每个来源各有哪些键名」用于排障
+ */
+function collectEnvSources(arg2, arg3) {
+  const bag = {};
+  const sources = [];
+
+  const isScalar = (value) => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+
+  const add = (obj, tag) => {
+    if (!obj || typeof obj !== 'object') return;
+    const keys = [];
+    for (const [key, value] of Object.entries(obj)) {
+      keys.push(key);
+      if (isScalar(value) && (bag[key] === undefined || bag[key] === '')) bag[key] = String(value);
+    }
+    sources.push({ tag, keys: keys.slice(0, 80) });
+  };
+
+  add(arg2, 'arg2');
+  add(arg2?.env, 'arg2.env');
+  add(arg2?.vars, 'arg2.vars');
+  add(arg2?.environment, 'arg2.environment');
+  add(arg3, 'arg3');
+  add(arg3?.env, 'arg3.env');
+  add(typeof globalThis !== 'undefined' ? globalThis.env : null, 'globalThis.env');
+  add(typeof globalThis !== 'undefined' ? globalThis.__env : null, 'globalThis.__env');
+  if (typeof process !== 'undefined' && process.env) add(process.env, 'process.env');
+
+  /* 部分实现会把变量直接挂在全局对象上，这里只取项目相关的几个前缀 */
+  let directKeys = [];
+  try {
+    directKeys = Object.keys(globalThis).filter((key) => /^(ESA_|ALIBABA_|WEBHOOK_)/.test(key));
+    for (const key of directKeys) {
+      const value = globalThis[key];
+      if (typeof value === 'string' && bag[key] === undefined) bag[key] = value;
+    }
+  } catch {
+    directKeys = [];
+  }
+  if (directKeys.length) sources.push({ tag: 'globalThis.direct', keys: directKeys.slice(0, 80) });
+
+  Object.defineProperty(bag, '__isEnvBag', { value: true, enumerable: false});
+  Object.defineProperty(bag, '__sources', {value: sources, enumerable: false});
+  return bag;
+}
+
+/** 列出各来源上的键名（仅用于排障回显，不含任何值） */
 function listEnvKeys(env) {
   if (!env || typeof env !== 'object') return [];
+  if (Array.isArray(env.__sources)) {
+    const out = [];
+    for (const item of env.__sources) {
+      /* process.env 在本地调试时键太多，不参与排障回显，避免淹没真正有用的来源 */
+      if (item.tag === 'process.env') continue;
+      for (const key of item.keys) out.push(`${item.tag}:${key}`);
+    }
+    return out.slice(0, 100);
+  }
   try {
-    return Object.keys(env);
+    return Object.keys(env).slice(0, 100);
   } catch {
     return [];
   }
