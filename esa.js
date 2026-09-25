@@ -370,8 +370,10 @@ function buildClient(env) {
       message: `缺少 AccessKey 配置：运行时 env 中未读取到 ${missing.join(' / ')}`,
       missingEnv: missing,
       /* envKeyCount=0 基本可判定「运行时环境变量整体没注入」：多半配在了「构建信息 → 环境变量」或配在了别的环境 */
-      envKeyCount: env && typeof env === 'object' ? Object.keys(env).length : 0,
-      hint: '请在 ESA 控制台「函数和Pages → 项目 → 环境变量/密钥」配置（不是「构建信息 → 环境变量」），保存后重新部署一次；变量名区分大小写，值首尾不要带空格或换行',
+      envKeyCount: listEnvKeys(env).length,
+      /* 只回显运行时 env 的「键名」，绝不回显值，便于确认到底注入了哪些变量 */
+      envKeys: listEnvKeys(env).slice(0, 100),
+      hint: '请在 ESA 控制台「函数和Pages → 项目 → 函数变量/环境变量(密钥)」配置（不是「构建信息 → 环境变量」），保存后重新部署一次；变量名区分大小写，值首尾不要带空格或换行',
     };
     throw err;
   }
@@ -383,6 +385,16 @@ function buildClient(env) {
     endpoint: getEnv(env, 'ESA_API_ENDPOINT') || undefined,
     timeoutMs: getEnv(env, 'ESA_API_TIMEOUT_MS') || undefined,
   });
+}
+
+/** 列出运行时 env 的键名（仅用于排障回显，不含任何值） */
+function listEnvKeys(env) {
+  if (!env || typeof env !== 'object') return [];
+  try {
+    return Object.keys(env);
+  } catch {
+    return [];
+  }
 }
 
 /** 环境变量：优先取边缘函数传入的 env，其次 globalThis.env，最后 process.env（本地调试） */
