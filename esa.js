@@ -1,26 +1,26 @@
 /**
- * 阿里云 ESA 边缘函数入口：通过 HTTP Webhook 更新 ESA 加速域名的回源地址与回源端口
+ * 闃块噷浜?ESA 杈圭紭鍑芥暟鍏ュ彛锛氶€氳繃 HTTP Webhook 鏇存柊 ESA 鍔犻€熷煙鍚嶇殑鍥炴簮鍦板潃涓庡洖婧愮鍙?
  *
- * 路由（与 edgeone 版本保持一致）：
- *   GET  /update-origin?domain=www.example.com&ip=1.2.3.4   更新（需 ESA_ALLOW_GET_UPDATE=true）
- *   GET  /update-origin?domain=www.example.com              查询（需 ESA_ALLOW_DESCRIBE=true）
+ * 璺敱锛堜笌 edgeone 鐗堟湰淇濇寔涓€鑷达級锛?
+ *   GET  /update-origin?domain=www.example.com&ip=1.2.3.4   鏇存柊锛堥渶 ESA_ALLOW_GET_UPDATE=true锛?
+ *   GET  /update-origin?domain=www.example.com              鏌ヨ锛堥渶 ESA_ALLOW_DESCRIBE=true锛?
  *   POST /update-origin  { "secret": "...", "domain": "...", "ip": "..." }
  *
- * 说明：
- *   - ESA 用「站点 SiteId + 记录（加速域名）」定位，回源地址可能落在两个位置：
- *       1) 记录引用的源地址池（RecordSourceType=OP，池内 Origins[].Address 为回源地址）
- *       2) 记录值本身（普通域名源站的 CNAME，或代理加速的 A/AAAA 记录）
- *     脚本会自动判断，也可用 originPoolId 显式指定源地址池。
- *   - 回源协议（http/https/follow）与回源端口是站点级「回源规则」，
- *     仅在请求显式传入 httpPort / httpsPort / originProtocol 时才修改；
- *     优先匹配该域名的规则，其次匹配全局配置，都没有则新建一条按域名匹配的规则。
+ * 璇存槑锛?
+ *   - ESA 鐢ㄣ€岀珯鐐?SiteId + 璁板綍锛堝姞閫熷煙鍚嶏級銆嶅畾浣嶏紝鍥炴簮鍦板潃鍙兘钀藉湪涓や釜浣嶇疆锛?
+ *       1) 璁板綍寮曠敤鐨勬簮鍦板潃姹狅紙RecordSourceType=OP锛屾睜鍐?Origins[].Address 涓哄洖婧愬湴鍧€锛?
+ *       2) 璁板綍鍊兼湰韬紙鏅€氬煙鍚嶆簮绔欑殑 CNAME锛屾垨浠ｇ悊鍔犻€熺殑 A/AAAA 璁板綍锛?
+ *     鑴氭湰浼氳嚜鍔ㄥ垽鏂紝涔熷彲鐢?originPoolId 鏄惧紡鎸囧畾婧愬湴鍧€姹犮€?
+ *   - 鍥炴簮鍗忚锛坔ttp/https/follow锛変笌鍥炴簮绔彛鏄珯鐐圭骇銆屽洖婧愯鍒欍€嶏紝
+ *     浠呭湪璇锋眰鏄惧紡浼犲叆 httpPort / httpsPort / originProtocol 鏃舵墠淇敼锛?
+ *     浼樺厛鍖归厤璇ュ煙鍚嶇殑瑙勫垯锛屽叾娆″尮閰嶅叏灞€閰嶇疆锛岄兘娌℃湁鍒欐柊寤轰竴鏉℃寜鍩熷悕鍖归厤鐨勮鍒欍€?
  */
 
 import { EsaClient, EsaApiError, mapEsaCodeToStatus } from './lib/esa-client.js';
 
 const ROUTE_PATH = '/update-origin';
 
-/** ESA 边缘函数（Pages）入口：export default { fetch(request, env, ctx) } */
+/** ESA 杈圭紭鍑芥暟锛圥ages锛夊叆鍙ｏ細export default { fetch(request, env, ctx) } */
 export default {
   async fetch(request, env, ctx) {
     return handleRequest(request, env);
@@ -38,10 +38,10 @@ export async function handleRequest(request, env = {}) {
   try {
     pathname = new URL(request.url).pathname.replace(/\/+$/, '') || '/';
     if (pathname !== ROUTE_PATH) {
-      return json({ error: 'Not Found', message: `仅支持 ${ROUTE_PATH} 路由` }, 404, corsOrigin);
+      return json({ error: 'Not Found', message: `浠呮敮鎸?${ROUTE_PATH} 璺敱` }, 404, corsOrigin);
     }
   } catch {
-    return json({ error: 'Bad Request', message: '非法请求 URL' }, 400, corsOrigin);
+    return json({ error: 'Bad Request', message: '闈炴硶璇锋眰 URL' }, 400, corsOrigin);
   }
 
   const requestId = request.headers.get('x-request-id') || `req-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
@@ -58,7 +58,7 @@ export async function handleRequest(request, env = {}) {
           return json(
             {
               error: 'Method Not Allowed',
-              message: 'GET 更新已关闭；如需启用请设置环境变量 ESA_ALLOW_GET_UPDATE=true，或改用 POST 请求',
+              message: 'GET 鏇存柊宸插叧闂紱濡傞渶鍚敤璇疯缃幆澧冨彉閲?ESA_ALLOW_GET_UPDATE=true锛屾垨鏀圭敤 POST 璇锋眰',
             },
             405,
             corsOrigin,
@@ -69,41 +69,41 @@ export async function handleRequest(request, env = {}) {
       if (hasDomain) {
         if (getEnv(env, 'ESA_ALLOW_DESCRIBE') !== 'true') {
           return json(
-            { error: 'Method Not Allowed', message: 'GET 查询已关闭；如需启用请设置环境变量 ESA_ALLOW_DESCRIBE=true' },
+            { error: 'Method Not Allowed', message: 'GET 鏌ヨ宸插叧闂紱濡傞渶鍚敤璇疯缃幆澧冨彉閲?ESA_ALLOW_DESCRIBE=true' },
             405,
             corsOrigin,
           );
         }
         return await describeOrigin(env, source, { corsOrigin, requestId });
       }
-      return json({ error: 'Bad Request', message: '缺少参数 domain' }, 400, corsOrigin);
+      return json({ error: 'Bad Request', message: '缂哄皯鍙傛暟 domain' }, 400, corsOrigin);
     }
 
     if (request.method === 'POST') return await updateOrigin(env, source, { corsOrigin, requestId });
 
-    return json({ error: 'Method Not Allowed', message: `不支持的请求方法 ${request.method}` }, 405, corsOrigin);
+    return json({ error: 'Method Not Allowed', message: `涓嶆敮鎸佺殑璇锋眰鏂规硶 ${request.method}` }, 405, corsOrigin);
   } catch (err) {
     return handleError(err, corsOrigin);
   }
 }
 
 /* ---------------------------------------------------------------------------------- */
-/*                                        查询                                         */
+/*                                        鏌ヨ                                         */
 /* ---------------------------------------------------------------------------------- */
 
 async function describeOrigin(env, source, { corsOrigin, requestId }) {
   const client = buildClient(env);
   const siteId = resolveSiteId(env, source);
-  if (!siteId) return json({ error: 'Bad Request', message: '缺少 siteId，请传参或在环境变量 ESA_SITE_ID 中配置' }, 400, corsOrigin);
-  if (!/^\d{5,20}$/.test(siteId)) return json({ error: 'Bad Request', message: 'siteId 非法，ESA 站点 ID 为纯数字' }, 400, corsOrigin);
+  if (!siteId) return json({ error: 'Bad Request', message: '缂哄皯 siteId锛岃浼犲弬鎴栧湪鐜鍙橀噺 ESA_SITE_ID 涓厤缃? }, 400, corsOrigin);
+  if (!/^\d{5,20}$/.test(siteId)) return json({ error: 'Bad Request', message: 'siteId 闈炴硶锛孍SA 绔欑偣 ID 涓虹函鏁板瓧' }, 400, corsOrigin);
 
   const domain = normalizeDomain(source.get('domain'));
-  if (!domain) return json({ error: 'Bad Request', message: 'domain 非法' }, 400, corsOrigin);
+  if (!domain) return json({ error: 'Bad Request', message: 'domain 闈炴硶' }, 400, corsOrigin);
   checkDomainWhitelist(env, domain);
 
   const record = await client.findRecord(siteId, domain);
   if (!record) {
-    return json({ error: 'Not Found', message: `站点 ${siteId} 下未找到记录（加速域名）${domain}` }, 404, corsOrigin);
+    return json({ error: 'Not Found', message: `绔欑偣 ${siteId} 涓嬫湭鎵惧埌璁板綍锛堝姞閫熷煙鍚嶏級${domain}` }, 404, corsOrigin);
   }
 
   const detail = await client.getRecord(record.RecordId);
@@ -123,11 +123,11 @@ async function describeOrigin(env, source, { corsOrigin, requestId }) {
 }
 
 /* ---------------------------------------------------------------------------------- */
-/*                                        更新                                         */
+/*                                        鏇存柊                                         */
 /* ---------------------------------------------------------------------------------- */
 
 async function updateOrigin(env, source, { corsOrigin, requestId }) {
-  /* 鉴权：必须早于构建客户端，否则凭证缺失时会先抛 missing credentials，导致鉴权失败也被报成 500 */
+  /* 閴存潈锛氬繀椤绘棭浜庢瀯寤哄鎴风锛屽惁鍒欏嚟璇佺己澶辨椂浼氬厛鎶?missing credentials锛屽鑷撮壌鏉冨け璐ヤ篃琚姤鎴?500 */
   const secret = pick(source, 'secret', 'token');
   if (!checkSecret(env, secret)) {
     return json({ error: 'Unauthorized', message: 'invalid secret' }, 401, corsOrigin);
@@ -135,53 +135,53 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
 
   const client = buildClient(env);
 
-  /* 站点与域名 */
+  /* 绔欑偣涓庡煙鍚?*/
   const siteId = resolveSiteId(env, source);
-  if (!siteId) return json({ error: 'Bad Request', message: '缺少 siteId' }, 400, corsOrigin);
-  if (!/^\d{5,20}$/.test(siteId)) return json({ error: 'Bad Request', message: 'siteId 非法，ESA 站点 ID 为纯数字' }, 400, corsOrigin);
+  if (!siteId) return json({ error: 'Bad Request', message: '缂哄皯 siteId' }, 400, corsOrigin);
+  if (!/^\d{5,20}$/.test(siteId)) return json({ error: 'Bad Request', message: 'siteId 闈炴硶锛孍SA 绔欑偣 ID 涓虹函鏁板瓧' }, 400, corsOrigin);
 
   const domain = normalizeDomain(pick(source, 'domain'));
-  if (!domain) return json({ error: 'Bad Request', message: 'domain 非法' }, 400, corsOrigin);
+  if (!domain) return json({ error: 'Bad Request', message: 'domain 闈炴硶' }, 400, corsOrigin);
   checkDomainWhitelist(env, domain);
 
-  /* 新源站地址 */
+  /* 鏂版簮绔欏湴鍧€ */
   const separator = getEnv(env, 'ESA_ORIGIN_SEPARATOR') || ',';
   const addresses = normalizeOrigins(pick(source, 'ip', 'origin', 'origins', 'value'), separator);
-  if (!addresses.length) return json({ error: 'Bad Request', message: '缺少 ip' }, 400, corsOrigin);
+  if (!addresses.length) return json({ error: 'Bad Request', message: '缂哄皯 ip' }, 400, corsOrigin);
   for (const address of addresses) {
-    if (!isValidOrigin(address)) return json({ error: 'Bad Request', message: `ip 非法：${address}` }, 400, corsOrigin);
+    if (!isValidOrigin(address)) return json({ error: 'Bad Request', message: `ip 闈炴硶锛?{address}` }, 400, corsOrigin);
   }
 
-  /* 回源端口与协议 */
+  /* 鍥炴簮绔彛涓庡崗璁?*/
   const httpPort = normalizePort(pick(source, 'httpPort', 'http_port', 'originHttpPort'));
-  if (httpPort === false) return json({ error: 'Bad Request', message: 'httpPort 非法，应为 1-65535' }, 400, corsOrigin);
+  if (httpPort === false) return json({ error: 'Bad Request', message: 'httpPort 闈炴硶锛屽簲涓?1-65535' }, 400, corsOrigin);
   const httpsPort = normalizePort(pick(source, 'httpsPort', 'https_port', 'originHttpsPort'));
-  if (httpsPort === false) return json({ error: 'Bad Request', message: 'httpsPort 非法，应为 1-65535' }, 400, corsOrigin);
+  if (httpsPort === false) return json({ error: 'Bad Request', message: 'httpsPort 闈炴硶锛屽簲涓?1-65535' }, 400, corsOrigin);
   const originProtocol = normalizeOriginScheme(pick(source, 'originProtocol', 'origin_protocol', 'originScheme', 'scheme'));
-  if (originProtocol === false) return json({ error: 'Bad Request', message: 'originProtocol 非法，应为 http / https / follow' }, 400, corsOrigin);
+  if (originProtocol === false) return json({ error: 'Bad Request', message: 'originProtocol 闈炴硶锛屽簲涓?http / https / follow' }, 400, corsOrigin);
 
   const dryRun = pick(source, 'dryRun', 'dry_run', 'dryrun') === 'true' || getEnv(env, 'ESA_DRY_RUN') === 'true';
 
-  /* 定位记录 */
+  /* 瀹氫綅璁板綍 */
   const record = await client.findRecord(siteId, domain);
   if (!record) {
-    return json({ error: 'Not Found', message: `站点 ${siteId} 下未找到记录（加速域名）${domain}` }, 404, corsOrigin);
+    return json({ error: 'Not Found', message: `绔欑偣 ${siteId} 涓嬫湭鎵惧埌璁板綍锛堝姞閫熷煙鍚嶏級${domain}` }, 404, corsOrigin);
   }
   const detail = await client.getRecord(record.RecordId);
   const recordInfo = detail && detail.RecordId ? detail : record;
 
-  /* 定位源站写入位置 */
+  /* 瀹氫綅婧愮珯鍐欏叆浣嶇疆 */
   const poolIdFromRequest = String(pick(source, 'originPoolId', 'poolId', 'pool') || '').trim();
   const poolIdFromEnv = (getEnv(env, 'ESA_ORIGIN_POOL_ID') || '').trim();
   const explicitPoolId = poolIdFromRequest || poolIdFromEnv;
 
   let pool = null;
-  let target = 'record'; // 默认写「记录值」
+  let target = 'record'; // 榛樿鍐欍€岃褰曞€笺€?
 
   if (explicitPoolId) {
     const { pools } = await client.listOriginPools(siteId, { pageSize: 200 });
     pool = pools.find((item) => String(item.Id) === String(explicitPoolId)) || null;
-    if (!pool) return json({ error: 'Not Found', message: `站点 ${siteId} 下未找到源地址池 ${explicitPoolId}` }, 404, corsOrigin);
+    if (!pool) return json({ error: 'Not Found', message: `绔欑偣 ${siteId} 涓嬫湭鎵惧埌婧愬湴鍧€姹?${explicitPoolId}` }, 404, corsOrigin);
     target = 'pool';
   } else if (String(recordInfo.RecordSourceType || '').toUpperCase() === 'OP') {
     pool = await client.findOriginPoolByRecord(siteId, { recordId: recordInfo.RecordId, recordName: recordInfo.RecordName });
@@ -189,7 +189,7 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
       return json(
         {
           error: 'Not Found',
-          message: `记录 ${domain} 的源站类型为源地址池（OP），但未找到其引用的源地址池；请在请求中传入 originPoolId`,
+          message: `璁板綍 ${domain} 鐨勬簮绔欑被鍨嬩负婧愬湴鍧€姹狅紙OP锛夛紝浣嗘湭鎵惧埌鍏跺紩鐢ㄧ殑婧愬湴鍧€姹狅紱璇峰湪璇锋眰涓紶鍏?originPoolId`,
         },
         404,
         corsOrigin,
@@ -197,28 +197,28 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
     }
     target = 'pool';
   } else {
-    /* 记录值即源站地址：CNAME（普通域名源站）或代理的 A/AAAA 记录 */
-    /* RecordType 可能是 A/AAAA 这样的组合值，按 / 拆分后再判定 */
+    /* 璁板綍鍊煎嵆婧愮珯鍦板潃锛欳NAME锛堟櫘閫氬煙鍚嶆簮绔欙級鎴栦唬鐞嗙殑 A/AAAA 璁板綍 */
+    /* RecordType 鍙兘鏄?A/AAAA 杩欐牱鐨勭粍鍚堝€硷紝鎸?/ 鎷嗗垎鍚庡啀鍒ゅ畾 */
     const recordTypes = String(recordInfo.RecordType || '').toUpperCase().split('/');
     const allIp = addresses.every((address) => isIpLike(address));
     if (recordTypes.includes('CNAME') && allIp) {
       return json(
         {
           error: 'Bad Request',
-          message: '该记录是 CNAME（普通域名源站），记录值必须是域名；若要回源到 IP，请改用源地址池，或在请求中传入 originPoolId',
+          message: '璇ヨ褰曟槸 CNAME锛堟櫘閫氬煙鍚嶆簮绔欙級锛岃褰曞€煎繀椤绘槸鍩熷悕锛涜嫢瑕佸洖婧愬埌 IP锛岃鏀圭敤婧愬湴鍧€姹狅紝鎴栧湪璇锋眰涓紶鍏?originPoolId',
         },
         400,
         corsOrigin,
       );
     }
     if ((recordTypes.includes('A') || recordTypes.includes('AAAA')) && addresses.some((address) => !isIpLike(address))) {
-      return json({ error: 'Bad Request', message: `该记录类型为 ${recordInfo.RecordType}，回源地址必须是 IP` }, 400, corsOrigin);
+      return json({ error: 'Bad Request', message: `璇ヨ褰曠被鍨嬩负 ${recordInfo.RecordType}锛屽洖婧愬湴鍧€蹇呴』鏄?IP` }, 400, corsOrigin);
     }
   }
 
-  /* 回源规则（协议与端口） */
+  /* 鍥炴簮瑙勫垯锛堝崗璁笌绔彛锛?*/
   const needRuleUpdate = httpPort !== null || httpsPort !== null || originProtocol !== null;
-  /* newRule=true：跳过已有规则匹配，为该域名新建一条回源规则（避免端口写进全局配置） */
+  /* newRule=true锛氳烦杩囧凡鏈夎鍒欏尮閰嶏紝涓鸿鍩熷悕鏂板缓涓€鏉″洖婧愯鍒欙紙閬垮厤绔彛鍐欒繘鍏ㄥ眬閰嶇疆锛?*/
   const forceNewRule = pick(source, 'newRule', 'createRule', 'forceNewRule') === 'true';
   let rule = null;
   if (needRuleUpdate && !forceNewRule) rule = await findOriginRule(client, siteId, domain);
@@ -243,11 +243,11 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
   };
 
   const notes = [];
-  if (target === 'pool') notes.push(`回源地址写入源地址池「${pool.Name}」（Id: ${pool.Id}）`);
-  else notes.push(`回源地址写入记录值（${recordInfo.RecordType} 记录）`);
-  if (originProtocol === 'follow') notes.push('回源协议为 follow（跟随协议）时，实际端口由 OriginHttpPort / OriginHttpsPort 决定');
-  if (rule) notes.push(`回源端口/协议写入已有回源规则 ConfigId=${rule.ConfigId}（${rule.ConfigType}）`);
-  else if (needRuleUpdate) notes.push('站点下暂无可用回源规则，将按该域名新建一条回源规则');
+  if (target === 'pool') notes.push(`鍥炴簮鍦板潃鍐欏叆婧愬湴鍧€姹犮€?{pool.Name}銆嶏紙Id: ${pool.Id}锛塦);
+  else notes.push(`鍥炴簮鍦板潃鍐欏叆璁板綍鍊硷紙${recordInfo.RecordType} 璁板綍锛塦);
+  if (originProtocol === 'follow') notes.push('鍥炴簮鍗忚涓?follow锛堣窡闅忓崗璁級鏃讹紝瀹為檯绔彛鐢?OriginHttpPort / OriginHttpsPort 鍐冲畾');
+  if (rule) notes.push(`鍥炴簮绔彛/鍗忚鍐欏叆宸叉湁鍥炴簮瑙勫垯 ConfigId=${rule.ConfigId}锛?{rule.ConfigType}锛塦);
+  else if (needRuleUpdate) notes.push('绔欑偣涓嬫殏鏃犲彲鐢ㄥ洖婧愯鍒欙紝灏嗘寜璇ュ煙鍚嶆柊寤轰竴鏉″洖婧愯鍒?);
 
   if (dryRun) {
     return json(
@@ -268,7 +268,7 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
     );
   }
 
-  /* 写入源站地址 */
+  /* 鍐欏叆婧愮珯鍦板潃 */
   let requestIdFromApi = '';
   let readableBefore = null;
 
@@ -277,20 +277,20 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
     readableBefore = await client.updateOriginPool({ siteId, id: pool.Id, origins });
     requestIdFromApi = readableBefore.requestId || '';
   } else {
-    /* ESA 的 Data 必须是 JSON 字符串，且键为小写 value（传对象或 Data.Value 会报 MissingData） */
+    /* ESA 鐨?Data 蹇呴』鏄?JSON 瀛楃涓诧紝涓旈敭涓哄皬鍐?value锛堜紶瀵硅薄鎴?Data.Value 浼氭姤 MissingData锛?*/
     const params = { RecordId: recordInfo.RecordId };
     params.Data = JSON.stringify({ value: addresses.join(separator) });
     readableBefore = await client.updateRecord(params);
     requestIdFromApi = readableBefore.requestId || '';
   }
 
-  /* 写入回源协议与端口 */
+  /* 鍐欏叆鍥炴簮鍗忚涓庣鍙?*/
   let ruleResult = null;
   if (needRuleUpdate) {
     if (rule) {
       const payload = { SiteId: siteId, ConfigId: rule.ConfigId };
       if (rule.ConfigType !== 'global') {
-        /* 非全局配置回传原规则内容，避免被空值覆盖 */
+        /* 闈炲叏灞€閰嶇疆鍥炰紶鍘熻鍒欏唴瀹癸紝閬垮厤琚┖鍊艰鐩?*/
         if (rule.RuleName) payload.RuleName = rule.RuleName;
         if (rule.Rule) payload.Rule = rule.Rule;
         if (rule.RuleEnable) payload.RuleEnable = rule.RuleEnable;
@@ -304,7 +304,7 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
         return json(
           {
             error: 'Not Found',
-            message: '站点下未找到回源规则，且已通过 ESA_ALLOW_CREATE_ORIGIN_RULE=false 禁止自动创建；请先在 ESA 控制台创建回源规则',
+            message: '绔欑偣涓嬫湭鎵惧埌鍥炴簮瑙勫垯锛屼笖宸查€氳繃 ESA_ALLOW_CREATE_ORIGIN_RULE=false 绂佹鑷姩鍒涘缓锛涜鍏堝湪 ESA 鎺у埗鍙板垱寤哄洖婧愯鍒?,
             requestId: requestIdFromApi,
           },
           404,
@@ -324,7 +324,7 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
     }
   }
 
-  /* 回读确认 */
+  /* 鍥炶纭 */
   const recordAfter = await client.getRecord(recordInfo.RecordId);
   const poolAfter = target === 'pool'
     ? await client.findOriginPoolByRecord(siteId, { recordId: recordInfo.RecordId, recordName: recordInfo.RecordName })
@@ -351,20 +351,41 @@ async function updateOrigin(env, source, { corsOrigin, requestId }) {
 }
 
 /* ---------------------------------------------------------------------------------- */
-/*                                       辅助函数                                       */
+/*                                       杈呭姪鍑芥暟                                       */
 /* ---------------------------------------------------------------------------------- */
 
 function buildClient(env) {
+  const accessKeyId = getEnv(env, 'ESA_ACCESS_KEY_ID') || getEnv(env, 'ALIBABA_CLOUD_ACCESS_KEY_ID');
+  const accessKeySecret = getEnv(env, 'ESA_ACCESS_KEY_SECRET') || getEnv(env, 'ALIBABA_CLOUD_ACCESS_KEY_SECRET');
+
+  /* 鍑瘉缂哄け鏃剁粰鍑烘槑纭彁绀猴細鍙洖鏄鹃敭鍚嶄笌缂哄け椤癸紝缁濅笉鍥炴樉鍊?*/
+  const missing = [];
+  if (!accessKeyId) missing.push('ESA_ACCESS_KEY_ID');
+  if (!accessKeySecret) missing.push('ESA_ACCESS_KEY_SECRET');
+  if (missing.length) {
+    const err = new Error(`missing credentials: ${missing.join(', ')}`);
+    err.status = 500;
+    err.payload = {
+      error: 'Server Misconfigured',
+      message: `缂哄皯 AccessKey 閰嶇疆锛氳繍琛屾椂 env 涓湭璇诲彇鍒?${missing.join(' / ')}`,
+      missingEnv: missing,
+      /* envKeyCount=0 鍩烘湰鍙垽瀹氥€岃繍琛屾椂鐜鍙橀噺鏁翠綋娌℃敞鍏ャ€嶏細澶氬崐閰嶅湪浜嗐€屾瀯寤轰俊鎭?鈫?鐜鍙橀噺銆嶆垨閰嶅湪浜嗗埆鐨勭幆澧?*/
+      envKeyCount: env && typeof env === 'object' ? Object.keys(env).length : 0,
+      hint: '璇峰湪 ESA 鎺у埗鍙般€屽嚱鏁板拰Pages 鈫?椤圭洰 鈫?鐜鍙橀噺/瀵嗛挜銆嶉厤缃紙涓嶆槸銆屾瀯寤轰俊鎭?鈫?鐜鍙橀噺銆嶏級锛屼繚瀛樺悗閲嶆柊閮ㄧ讲涓€娆★紱鍙橀噺鍚嶅尯鍒嗗ぇ灏忓啓锛屽€奸灏句笉瑕佸甫绌烘牸鎴栨崲琛?,
+    };
+    throw err;
+  }
+
   return new EsaClient({
-    accessKeyId: getEnv(env, 'ESA_ACCESS_KEY_ID') || getEnv(env, 'ALIBABA_CLOUD_ACCESS_KEY_ID'),
-    accessKeySecret: getEnv(env, 'ESA_ACCESS_KEY_SECRET') || getEnv(env, 'ALIBABA_CLOUD_ACCESS_KEY_SECRET'),
+    accessKeyId,
+    accessKeySecret,
     securityToken: getEnv(env, 'ESA_SECURITY_TOKEN') || getEnv(env, 'ALIBABA_CLOUD_SECURITY_TOKEN'),
     endpoint: getEnv(env, 'ESA_API_ENDPOINT') || undefined,
     timeoutMs: getEnv(env, 'ESA_API_TIMEOUT_MS') || undefined,
   });
 }
 
-/** 环境变量：优先取边缘函数传入的 env，其次 globalThis.env，最后 process.env（本地调试） */
+/** 鐜鍙橀噺锛氫紭鍏堝彇杈圭紭鍑芥暟浼犲叆鐨?env锛屽叾娆?globalThis.env锛屾渶鍚?process.env锛堟湰鍦拌皟璇曪級 */
 function getEnv(env, key) {
   const fromArg = env && typeof env === 'object' ? env[key] : undefined;
   if (fromArg !== undefined && fromArg !== null && fromArg !== '') return String(fromArg);
@@ -411,9 +432,9 @@ function checkDomainWhitelist(env, domain) {
     .map((item) => normalizeDomain(item.trim()))
     .filter(Boolean);
   if (!allowed.includes(domain)) {
-    const err = new Error(`domain 不在白名单内：${domain}`);
+    const err = new Error(`domain 涓嶅湪鐧藉悕鍗曞唴锛?{domain}`);
     err.status = 403;
-    err.payload = { error: 'Forbidden', message: `domain 不在白名单内：${domain}` };
+    err.payload = { error: 'Forbidden', message: `domain 涓嶅湪鐧藉悕鍗曞唴锛?{domain}` };
     throw err;
   }
 }
@@ -436,7 +457,7 @@ function normalizeOrigins(value, separator) {
 
 function isValidOrigin(value) {
   if (!value || value.length > 253) return false;
-  /* 纯数字点分 / 含冒号的形式必须是一个合法 IP，避免把 999.999.999.999 当成域名放行 */
+  /* 绾暟瀛楃偣鍒?/ 鍚啋鍙风殑褰㈠紡蹇呴』鏄竴涓悎娉?IP锛岄伩鍏嶆妸 999.999.999.999 褰撴垚鍩熷悕鏀捐 */
   if (/^[\d.]+$/.test(value) || value.includes(':')) return isIPv4(value) || isIPv6(value);
   if (isIPv4(value) || isIPv6(value)) return true;
   const domainPattern = /^(?=.{1,253}$)([a-z0-9](-*[a-z0-9])*)(\.[a-z0-9](-*[a-z0-9])*)*$/i;
@@ -484,8 +505,8 @@ function defaultWeight(env) {
 }
 
 /**
- * 构造写入源地址池的 Origins（全量覆盖）
- * 尽量复用原有条目的 Name / Type / Enabled / Weight / Header，只替换地址，避免误改配置
+ * 鏋勯€犲啓鍏ユ簮鍦板潃姹犵殑 Origins锛堝叏閲忚鐩栵級
+ * 灏介噺澶嶇敤鍘熸湁鏉＄洰鐨?Name / Type / Enabled / Weight / Header锛屽彧鏇挎崲鍦板潃锛岄伩鍏嶈鏀归厤缃?
  */
 function buildOrigins(previous, addresses, weight) {
   const prev = Array.isArray(previous) ? previous : [];
@@ -506,27 +527,27 @@ function buildOrigins(previous, addresses, weight) {
 }
 
 /**
- * 生成回源规则的匹配表达式
- * 普通域名用 eq；泛域名（*.example.com）eq 不支持通配，正则 matches 又仅高级版/企业版可用，
- * 因此统一用 ends_with 匹配域名后缀，如 (ends_with(http.host, ".example.com"))
+ * 鐢熸垚鍥炴簮瑙勫垯鐨勫尮閰嶈〃杈惧紡
+ * 鏅€氬煙鍚嶇敤 eq锛涙硾鍩熷悕锛?.example.com锛塭q 涓嶆敮鎸侀€氶厤锛屾鍒?matches 鍙堜粎楂樼骇鐗?浼佷笟鐗堝彲鐢紝
+ * 鍥犳缁熶竴鐢?ends_with 鍖归厤鍩熷悕鍚庣紑锛屽 (ends_with(http.host, ".example.com"))
  */
 function hostRuleExpression(domain) {
   if (!domain.startsWith('*.')) return `(http.host eq "${domain}")`;
   return `(ends_with(http.host, "${domain.slice(1)}"))`;
 }
 
-/** 找到该域名对应的回源规则：优先按 http.host 匹配，其次取全局配置 */
+/** 鎵惧埌璇ュ煙鍚嶅搴旂殑鍥炴簮瑙勫垯锛氫紭鍏堟寜 http.host 鍖归厤锛屽叾娆″彇鍏ㄥ眬閰嶇疆 */
 async function findOriginRule(client, siteId, domain) {
   const { configs } = await client.listOriginRules(siteId, { pageSize: 200 });
   if (!configs.length) return null;
   const quoted = [`"${domain}"`, `'${domain}'`, `\u0022${domain}\u0022`];
-  /* ends_with 规则里写的是 ".example.com" 后缀，泛域名时一并匹配 */
+  /* ends_with 瑙勫垯閲屽啓鐨勬槸 ".example.com" 鍚庣紑锛屾硾鍩熷悕鏃朵竴骞跺尮閰?*/
   if (domain.startsWith('*.')) quoted.push(`"${domain.slice(1)}"`);
   const matched = configs.filter((item) => {
     if (String(item.ConfigType || '').toLowerCase() === 'global') return false;
     const rule = String(item.Rule || '');
     if (quoted.some((token) => rule.includes(token))) return true;
-    /* 兜底：ESA 控制台建的规则可能把域名放在 RuleName，Rule 写成 true */
+    /* 鍏滃簳锛欵SA 鎺у埗鍙板缓鐨勮鍒欏彲鑳芥妸鍩熷悕鏀惧湪 RuleName锛孯ule 鍐欐垚 true */
     return String(item.RuleName || '').toLowerCase() === String(domain).toLowerCase();
   });
   if (matched.length) return matched[0];
@@ -571,7 +592,7 @@ async function readJsonBody(request) {
   try {
     return JSON.parse(raw);
   } catch {
-    return json({ error: 'Bad Request', message: '请求体不是合法 JSON' }, 400, '*');
+    return json({ error: 'Bad Request', message: '璇锋眰浣撲笉鏄悎娉?JSON' }, 400, '*');
   }
 }
 
@@ -601,7 +622,7 @@ function handleError(err, corsOrigin) {
   }
   if (err && err.payload) return json(err.payload, err.status || 400, corsOrigin);
   if (err && /missing credentials|AccessKey/i.test(String(err.message))) {
-    return json({ error: 'Server Misconfigured', message: '缺少 AccessKey 配置' }, 500, corsOrigin);
+    return json({ error: 'Server Misconfigured', message: '缂哄皯 AccessKey 閰嶇疆' }, 500, corsOrigin);
   }
   return json({ error: 'Internal Error', message: String(err?.message || err) }, 500, corsOrigin);
 }
